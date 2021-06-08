@@ -114,6 +114,13 @@
       traefik.http.routers.traefik-rtr.service: api@internal
       ## Middlewares
       traefik.http.routers.traefik-rtr.middlewares: "{{ traefik_middlewares }}"
+      traefik.http.middlewares.traefik-headers.headers.accesscontrolalloworiginlist: "https://{{ traefik_domain }}"
+      traefik.http.middlewares.traefik-headers.headers.addvaryheader: "true"
+      traefik.http.middlewares.traefik-headers.headers.allowedhosts: "{{ traefik_name }}.{{ traefik_domain }}"
+      traefik.http.middlewares.traefik-headers.headers.sslhost: "{{ traefik_name }}.{{ traefik_domain }}"
+      traefik.http.middlewares.traefik-headers.headers.sslforcehost: "true"
+      traefik.http.middlewares.traefik-headers.headers.sslproxyheaders.X-Forwarded-Proto: https
+      traefik.http.middlewares.traefik-headers.headers.framedeny: "true"
       # HTTP-to-HTTPS Redirect
       traefik.http.routers.http-catchall.entrypoints: http
       traefik.http.routers.http-catchall.rule: "HostRegexp(`{host:.+}`)"
