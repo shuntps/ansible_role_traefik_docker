@@ -1,0 +1,9 @@
+---
+- include_tasks: network.yml
+  when: traefik_enabled == "true"
+
+- include_tasks: start.yml
+  when: traefik_enabled == "true"
+
+- include_tasks: stop.yml
+  when: traefik_enabled == "false"

@@ -1,0 +1,121 @@
+---
+- name: Create "{{ traefik_name }}" directories
+  ansible.builtin.file:
+    path: "{{ traefik_data_dir }}/{{ item }}"
+    state: directory
+  with_items: ["acme", "log", "rules"]
+
+- name: Check if acme.json exists
+  ansible.builtin.stat:
+    path: "{{ traefik_data_dir }}/acme/acme.json"
+  register: acme_result
+
+- name: Check if traefik.log files exists
+  ansible.builtin.stat:
+    path: "{{ traefik_data_dir }}/log/traefik.log"
+  register: traefiklog_result
+
+- name: Check if access.log files exists
+  ansible.builtin.stat:
+    path: "{{ traefik_data_dir }}/log/access.log"
+  register: accesslog_result
+
+- name: Ensures acme.json file exists
+  ansible.builtin.file:
+    path: "{{ traefik_data_dir }}/acme/acme.json"
+    state: touch
+    mode: "0600"
+  when: not acme_result.stat.exists
+
+- name: Ensures traefik.log file exists
+  ansible.builtin.file:
+    path: "{{ traefik_data_dir }}/log/traefik.log"
+    state: touch
+  when: not traefiklog_result.stat.exists
+
+- name: Ensures access.log file exists
+  ansible.builtin.file:
+    path: "{{ traefik_data_dir }}/log/access.log"
+    state: touch
+  when: not accesslog_result.stat.exists
+
+- name: Adding middlewares file
+  ansible.builtin.template: src={{item.src}} dest={{item.dest}}
+  with_items:
+    - { src: "templates/basic-auth.toml.j2", dest: "{{ traefik_data_dir }}/rules/basic-auth.toml" }
+    - { src: "templates/middleware-chains.toml.j2", dest: "{{ traefik_data_dir }}/rules/middleware-chains.toml" }
+    - { src: "templates/rate-limit.toml.j2", dest: "{{ traefik_data_dir }}/rules/rate-limit.toml" }
+    - { src: "templates/secure-headers.toml.j2", dest: "{{ traefik_data_dir }}/rules/secure-headers.toml" }
+    - { src: "templates/tls-opts.toml.j2", dest: "{{ traefik_data_dir }}/rules/tls-opts.toml" }
+
+- name: Start "{{ traefik_name }}" container
+  community.docker.docker_container:
+    name: "{{ traefik_name }}"
+    image: "traefik:{{ traefik_version }}"
+    restart_policy: "{{ traefik_restart_policy }}"
+    recreate: "{{ traefik_recreate }}"
+    pull: "true"
+    env:
+      TZ: "{{ traefik_timezone }}"
+      GODADDY_API_KEY: "{{ traefik_godaddy_api_key }}"
+      GODADDY_API_SECRET: "{{ traefik_godaddy_api_secret }}"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "{{ traefik_data_dir }}/acme/acme.json:/acme.json"
+      - "{{ traefik_data_dir }}/log/traefik.log:/traefik.log"
+      - "{{ traefik_data_dir }}/log/access.log:/access.log"
+      - "{{ traefik_data_dir }}/rules:/rules"
+    ports:
+      - "{{ traefik_http_port }}:80"
+      - "{{ traefik_https_port }}:443"
+    networks:
+      - name: "{{ traefik_network_mode }}"
+        ipv4_address: "{{ traefik_ipv4_address }}"
+    purge_networks: "true"
+    networks_cli_compatible: "true"
+    command:
+      - "--global.checkNewVersion=false"
+      - "--global.sendAnonymousUsage=false"
+      - "--api={{ traefik_api }}"
+      - "--api.dashboard={{ traefik_api_dashboard }}"
+      - "--api.insecure={{ traefik_api_insecure }}"
+      - "--log=true"
+      - "--log.level={{ traefik_log_level }}"
+      - "--log.filePath=/traefik.log"
+      - "--accessLog=true"
+      - "--accessLog.filePath=/access.log"
+      - "--accessLog.bufferingSize=100"
+      - "--accessLog.filters.statusCodes=400-499"
+      - "--entrypoints.http.address=:80"
+      - "--entrypoints.https.address=:443"
+      - "--entrypoints.https.http.tls.options=tls-opts@file"
+      - "--entrypoints.https.http.tls.certresolver={{ traefik_acme_certresolver }}"
+      - "--entrypoints.https.http.tls.domains[0].main={{ traefik_domain }}"
+      - "--entrypoints.https.http.tls.domains[0].sans=*.{{ traefik_domain }}"
+      - "--entrypoints.https.forwardedHeaders.trustedIPs={{ traefik_acme_trustedip }}"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network={{ traefik_network_mode }}"
+      - "--providers.docker.swarmMode=false"
+      - "--providers.file.directory=/rules"
+      - "--providers.file.watch=true"
+      # - "--certificatesResolvers.{{ traefik_acme_certresolver }}.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.{{ traefik_acme_certresolver }}.acme.email={{ traefik_acme_email }}"
+      - "--certificatesresolvers.{{ traefik_acme_certresolver }}.acme.storage=/acme.json"
+      - "--certificatesresolvers.{{ traefik_acme_certresolver }}.acme.dnschallenge.provider={{ traefik_acme_provider }}"
+      - "--certificatesresolvers.{{ traefik_acme_certresolver }}.acme.dnschallenge.resolvers={{ traefik_acme_resolvers }}"
+      - "--certificatesResolvers.{{ traefik_acme_certresolver }}.acme.dnsChallenge.delayBeforeCheck={{ traefik_acme_checkdelay }}"
+    labels:
+      traefik.enable: "{{ traefik_available_externally }}"
+      ## HTTP Routers
+      traefik.http.routers.traefik-rtr.entrypoints: https
+      traefik.http.routers.traefik-rtr.rule: "Host(`{{ traefik_name }}.{{ traefik_domain }}`)"
+      ## Services - API
+      traefik.http.routers.traefik-rtr.service: api@internal
+      ## Middlewares
+      traefik.http.routers.traefik-rtr.middlewares: "{{ traefik_middlewares }}"
+      # HTTP-to-HTTPS Redirect
+      traefik.http.routers.http-catchall.entrypoints: http
+      traefik.http.routers.http-catchall.rule: "HostRegexp(`{host:.+}`)"
+      traefik.http.routers.http-catchall.middlewares: redirect-to-https
+      traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: https

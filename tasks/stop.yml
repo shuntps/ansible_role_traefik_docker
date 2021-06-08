@@ -1,0 +1,5 @@
+---
+- name: Stop "{{ traefik_name }}" container
+  community.docker.docker_container:
+    name: "{{ traefik_name }}"
+    state: absent

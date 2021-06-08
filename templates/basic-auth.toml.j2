@@ -1,0 +1,8 @@
+# Use this command and change the user and password:
+# echo $(htpasswd -nb user password)
+
+[http.middlewares]
+  [http.middlewares.basic-auth.basicAuth]
+    users = [
+      "{{ traefik_basicauth_users }}",
+    ]

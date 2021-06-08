@@ -1,0 +1,51 @@
+---
+# Shared docker variable
+docker_data_dir: /data/docker
+docker_external_network: frontend
+docker_external_network_subnet: 192.168.250.0/24
+docker_internal_network: backend
+docker_internal_network_subnet: 192.168.50.0/24
+docker_domain: example.com
+docker_timezone: America/Montreal
+docker_email: example@example.com
+
+# General
+traefik_enabled: "false"
+traefik_name: traefik
+traefik_version: latest
+traefik_restart_policy: always
+traefik_recreate: "false"
+
+# Environment
+traefik_timezone: "{{ docker_timezone }}"
+traefik_godaddy_api_key: your_api_key
+traefik_godaddy_api_secret: your_api_secret
+
+# Directories
+traefik_data_dir: "{{ docker_data_dir }}/{{ traefik_name }}"
+
+# Network
+traefik_available_externally: "true"
+traefik_http_port: "80"
+traefik_https_port: "443"
+traefik_network_mode: "{{ docker_external_network }}"
+traefik_ipv4_address: "192.168.250.254"
+
+# Command
+traefik_api: "true"
+traefik_api_dashboard: "true"
+traefik_api_insecure: "false"
+traefik_log_level: INFO
+traefik_domain: "{{ docker_domain }}"
+traefik_acme_certresolver: dns-godaddy
+traefik_acme_trustedip: "198.71.244.0/25,198.71.245.0/25,198.71.246.0/25,198.71.247.0/25,198.71.253.0/24,198.71.254.0/24,198.71.255.0/24"
+traefik_acme_email: "{{ docker_email }}"
+traefik_acme_provider: godaddy
+traefik_acme_resolvers: ns13.domaincontrol.com:53,ns14.domaincontrol.com:53
+traefik_acme_checkdelay: "90"
+
+# Middlewares
+traefik_middlewares: chain-no-auth@file # chain-no-auth@file, chain-basic-auth@file, chain-oauth@file
+traefik_basicauth_users: user:$apr1$y.WvC/6.$E3FtsfTntPC0wVJ7IUVtX1 # Use this command and change the user and password: echo $(htpasswd -nb user password)
+oauth_enabled: "false"
+errorpages_enabled: "false"

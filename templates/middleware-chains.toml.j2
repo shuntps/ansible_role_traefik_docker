@@ -1,0 +1,31 @@
+[http.middlewares]
+  [http.middlewares.chain-no-auth.chain]
+    middlewares = [
+    "secure-headers", 
+    "rate-limit",
+    {% if errorpages_enabled is defined and errorpages_enabled is sameas true %}
+    "errorpages",
+    {% endif %}
+  ]
+
+  [http.middlewares.chain-basic-auth.chain]
+    middlewares = [
+    "secure-headers",
+    "rate-limit",
+    "basic-auth",
+    {% if errorpages_enabled is defined and errorpages_enabled is sameas true %}
+    "errorpages",
+    {% endif %}
+  ]
+
+  [http.middlewares.chain-oauth.chain]
+    middlewares = [
+    "secure-headers",
+    "rate-limit",
+    {% if errorpages_enabled is defined and errorpages_enabled is sameas true %}
+    "errorpages",
+    {% endif %}
+    {% if oauth_enabled is defined and oauth_enabled is sameas true %}
+    "oauth",
+    {% endif %}
+  ]
