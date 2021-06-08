@@ -22,10 +22,10 @@
     middlewares = [
     "secure-headers",
     "rate-limit",
-{% if errorpages_enabled == "true" %}
-    "errorpages",
-{% endif %}
 {% if oauth_enabled == "true" %}
     "oauth",
+{% endif %}
+{% if errorpages_enabled == "true" %}
+    "errorpages",
 {% endif %}
   ]
