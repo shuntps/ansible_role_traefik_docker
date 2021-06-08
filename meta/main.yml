@@ -17,5 +17,8 @@ galaxy_info:
   galaxy_tags:
     - docker
     - traefik
+    - oauth
+    - errorpages
+    - error-pages
 
 dependencies: []
