@@ -13,7 +13,7 @@
     "secure-headers",
     "rate-limit",
     "basic-auth",
-    {% if errorpages_enabled is defined and errorpages_enabled is sameas true %}
+    {% if errorpages_enabled == "true" %}
     "errorpages",
     {% endif %}
   ]
