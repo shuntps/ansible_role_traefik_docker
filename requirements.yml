@@ -1,2 +1,16 @@
+---
+roles:
+
+  - name: sht.traefik.docker
+    src: git@github.com:Shuntps/ansible_role_traefik_docker.git
+    scm: git
+    version: master
+
+  - name: sht.oauth.docker
+    src: git@github.com:Shuntps/ansible_role_oauth_docker.git
+    scm: git
+    version: master
+
 collections:
-- name: community.docker
+
+  - name: community.docker
